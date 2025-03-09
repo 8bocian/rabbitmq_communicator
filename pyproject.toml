@@ -1,0 +1,25 @@
+[project]
+name = "rabbitmq-communicator"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Stork",email = "74800537+8bocian@users.noreply.github.com"}
+]
+readme = "README.md"
+requires-python = "=3.11"
+dependencies = [
+    "aio-pika (>=9.5.5,<10.0.0)",
+    "opencv-python (>=4.11.0.86,<5.0.0.0)",
+    "pytesseract (>=0.3.13,<0.4.0)"
+]
+
+[tool.poetry]
+packages = [{include = "rabbitmq_communicator", from = "src"}]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
