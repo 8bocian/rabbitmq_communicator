@@ -56,7 +56,7 @@ async def test_connect_success(communicator: RabbitMQCommunicator):
 async def test_connect_failure(communicator: RabbitMQCommunicator):
     """Test that connect raises an exception if the connection fails."""
     # Simulate an exception in the connect_robust method
-    with patch("aio_pika.connect_robust", side_effect=Exception("Connection failed")) as p:
+    with patch("aio_pika.connect_robust", side_effect=Exception("Connection failed")):
         with pytest.raises(ConnectionError, match="Failed to connect to RabbitMQ"):
             await communicator.connect("amqp://guest:guest@localhost")
 
@@ -131,7 +131,7 @@ async def test_on_message_error_handling(communicator: RabbitMQCommunicator):
     mock_message.headers = {"key": "value"}
     mock_message.message_id = 1
     with mock.patch.object(communicator.message_processor, 'process_message',
-                           MagicMock(side_effect=Exception("Processing Error"))) as mock_send_message:
+                           MagicMock(side_effect=Exception("Processing Error"))):
         await communicator._RabbitMQCommunicator__on_message(mock_message)
 
     mock_message.ack.assert_not_called()
