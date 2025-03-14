@@ -27,7 +27,7 @@ class RabbitMQCommunicator:
 
         self.max_messages = max_processes
         self.message_processor = message_processor
-        self.rabbitmq_url = Optional[str]
+        self.rabbitmq_url: Optional[str] = None
 
     async def connect(self, rabbitmq_url: str):
         """
@@ -39,10 +39,8 @@ class RabbitMQCommunicator:
         try:
             if not self.connection or self.connection.is_closed:
                 self.connection = await aio_pika.connect_robust(rabbitmq_url)
-                print(self.connection.is_closed)
                 self.channel = await self.connection.channel()
                 await self.channel.set_qos(prefetch_count=self.max_messages)
-                print(self.channel.is_closed)
                 self.in_queue = await self.channel.declare_queue(self.in_queue_name, durable=True)
                 self.out_queue = await self.channel.declare_queue(self.out_queue_name, durable=True)
 
@@ -58,11 +56,11 @@ class RabbitMQCommunicator:
         :return: returns True if connection is opened and False if is closed
         """
         if not all([self.connection, self.channel]):
-            print("1", self.connection, self.channel)
+            logging.debug(f"Connection status: {self.connection}, Channel status: {self.channel}")
             return False
 
         if any([self.connection.is_closed, self.channel.is_closed]):
-            print("2", self.connection.is_closed, self.channel.is_closed)
+            logging.debug(f"Connection status: {self.connection.is_closed}, Channel status: {self.channel.is_closed}")
             return False
 
         return True
@@ -117,6 +115,7 @@ class RabbitMQCommunicator:
             await self.connect(self.rabbitmq_url)
             if not self.check_connection():
                 raise ConnectionError(f"Lost connection to the server and couldn't reconnect, {e}")
+            await message.nack()
         except Exception as e:
             logging.error(f"Error processing message: {message.message_id}, {e}")
             await message.nack()
