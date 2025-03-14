@@ -27,6 +27,7 @@ class RabbitMQCommunicator:
 
         self.max_messages = max_processes
         self.message_processor = message_processor
+        self.max_message_retries = 3
         self.rabbitmq_url: Optional[str] = None
 
     async def connect(self, rabbitmq_url: str):
@@ -117,5 +118,14 @@ class RabbitMQCommunicator:
                 raise ConnectionError(f"Lost connection to the server and couldn't reconnect, {e}")
             await message.nack()
         except Exception as e:
-            logging.error(f"Error processing message: {message.message_id}, {e}")
-            await message.nack()
+            retries = message.headers.get("x-retries", 0)  # Get current retry count
+            if retries >= self.max_message_retries:
+                logging.error(f"Message {message.message_id} failed after {retries} retries. Rejecting permanently. {e}")
+                await message.reject(requeue=False)  # Permanently reject the message
+            else:
+                logging.warning(f"Message {message.message_id} failed. Retrying {retries + 1}/{self.max_message_retries}... {e}")
+                new_headers = message.headers.copy()
+                new_headers["x-retries"] = retries + 1  # Increment retry count
+
+                await self.send_message(message.body.decode(), new_headers)  # Requeue with updated header
+                await message.ack()  # Acknowledge the failed message to prevent duplicate requeue
